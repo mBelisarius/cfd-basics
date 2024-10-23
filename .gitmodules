@@ -1,0 +1,3 @@
+[submodule "third_party/nuenv"]
+	path = third_party/nuenv
+	url = https://github.com/mBelisarius/nuenv
