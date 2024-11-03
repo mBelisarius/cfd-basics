@@ -3,6 +3,7 @@
 
 #include "nuenv/core"
 
+#include "mesh/cell.hpp"
 #include "mesh/face.hpp"
 
 namespace cfd_basics {
@@ -12,48 +13,172 @@ class PolyMesh {
  public:
   PolyMesh() = default;
 
-  PolyMesh(const nuenv::VectorX<ScalarField>& points,
-           const nuenv::VectorX<Face>& faces)
-      : points_(points), faces_(faces) {}
+  PolyMesh(nuenv::Index nCells,
+           const nuenv::VectorX<ScalarField>& points,
+           const nuenv::VectorX<Face>& faces);
 
-  ScalarField FaceNormal(nuenv::Index faceId) {
-    auto facePointsId = faces_[faceId].Points();
+  nuenv::Index NCells() const { return nCells_; }
 
-    ScalarField p1 = points_(facePointsId[0]);
-    ScalarField p2 = points_(facePointsId[1]);
-    ScalarField p3 = points_(facePointsId[2]);
+  const nuenv::VectorX<ScalarField>& Points() const { return points_; }
 
-    ScalarField v1 = p2 - p1;
-    ScalarField v2 = p3 - p1;
+  const nuenv::VectorX<Face>& Faces() const { return faces_; }
 
-    ScalarField normal = v1.cross(v2);
-    normal.normalize();
+  const nuenv::VectorX<Cell>& Cells() const { return cells_; }
 
-    return normal;
-  }
+  ScalarField FaceNormal(nuenv::Index faceId);
 
-  ScalarField FaceCentre(nuenv::Index faceId) {
-    ScalarField centroid = {0.0, 0.0, 0.0};
-    auto face = faces_[faceId];
+  ScalarField FaceNormal3p(nuenv::Index faceId);
 
-    for (const ScalarField& point : face.Points()) {
-      centroid[0] += point[0];
-      centroid[1] += point[1];
-      centroid[2] += point[2];
-    }
+  ScalarField FaceCentre(nuenv::Index faceId);
 
-    Scalar order = face.Order();
-    centroid[0] /= order;
-    centroid[1] /= order;
-    centroid[2] /= order;
+  nuenv::VectorX<nuenv::Vector2X<Scalar>> FaceProject2D(nuenv::Index faceId);
 
-    return centroid;
-  }
+  Scalar FaceArea(nuenv::Index faceId);
+
+  ScalarField CellCentre(nuenv::Index cellId);
+
+  Scalar CellVolume(nuenv::Index cellId);
 
  private:
+  nuenv::Index nCells_;
   nuenv::VectorX<ScalarField> points_;
   nuenv::VectorX<Face> faces_;
+  nuenv::VectorX<Cell> cells_;
 };
+
+template<typename Scalar, typename ScalarField>
+PolyMesh<Scalar, ScalarField>::PolyMesh(
+    nuenv::Index nCells,
+    const nuenv::VectorX<ScalarField>& points,
+    const nuenv::VectorX<Face>& faces)
+    : nCells_(nCells), points_(points), faces_(faces), cells_(nCells) {
+  for (const auto& face : faces_) {
+    cells_[face.OwnerId()].AddFace(face.Id());
+
+    if (face.NeighbourId() > -1) {
+      cells_[face.NeighbourId()].AddFace(face.Id());
+    }
+  }
+}
+
+template<typename Scalar, typename ScalarField>
+ScalarField PolyMesh<Scalar, ScalarField>::FaceNormal(nuenv::Index faceId) {
+  auto facePointsId = faces_[faceId].PointsId();
+  nuenv::Index nPoints = facePointsId.size();
+
+  ScalarField normal {0.0, 0.0, 0.0};
+
+  for (nuenv::Index i = 0; i < nPoints; ++i) {
+    const ScalarField& current = points_(facePointsId[i]);
+    const ScalarField& next = points_(facePointsId[(i + 1) % nPoints]);
+    normal += (current - next).cross(current + next);
+  }
+
+  normal.normalize();
+
+  return normal;
+}
+
+template<typename Scalar, typename ScalarField>
+ScalarField PolyMesh<Scalar, ScalarField>::FaceNormal3p(nuenv::Index faceId) {
+  auto facePointsId = faces_[faceId].PointsId();
+
+  ScalarField p1 = points_(facePointsId[0]);
+  ScalarField p2 = points_(facePointsId[1]);
+  ScalarField p3 = points_(facePointsId[2]);
+
+  ScalarField v1 = p2 - p1;
+  ScalarField v2 = p3 - p1;
+
+  ScalarField normal = v1.cross(v2);
+  normal.normalize();
+
+  return normal;
+}
+
+template<typename Scalar, typename ScalarField>
+ScalarField PolyMesh<Scalar, ScalarField>::FaceCentre(nuenv::Index faceId) {
+  auto face = faces_[faceId];
+  auto facePointsId = faces_[faceId].PointsId();
+  ScalarField centroid = {0.0, 0.0, 0.0};
+
+  for (const auto& pointId : facePointsId) {
+    centroid += points_[pointId];
+  }
+
+  nuenv::Index order = face.Order();
+  centroid /= static_cast<Scalar>(order);
+
+  return centroid;
+}
+
+template<typename Scalar, typename ScalarField>
+nuenv::VectorX<nuenv::Vector2X<Scalar>> PolyMesh<Scalar, ScalarField>::FaceProject2D(nuenv::Index faceId) {
+  auto facePointsId = faces_[faceId].PointsId();
+  nuenv::Index order = faces_[faceId].Order();
+  ScalarField normal = FaceNormal(faceId);
+  ScalarField centre = FaceCentre(faceId);
+
+  ScalarField e1 = (points_[facePointsId[1]] - points_[facePointsId[0]]);
+  e1.normalize();
+  ScalarField e2 = e1.cross(-normal);
+  e2.normalize();
+
+  nuenv::VectorX<nuenv::Vector2X<Scalar>> projected(order);
+  for (nuenv::Index i = 0; i < order; ++i) {
+    ScalarField vec = points_[facePointsId[i]] - centre;
+    projected[i] = nuenv::Vector2X<Scalar> {vec.dot(e1), vec.dot(e2)};
+  }
+
+  return projected;
+}
+
+template<typename Scalar, typename ScalarField>
+Scalar PolyMesh<Scalar, ScalarField>::FaceArea(nuenv::Index faceId) {
+  // Shoelace Theorem
+  auto points = FaceProject2D(faceId);
+  nuenv::Index order = faces_[faceId].Order();
+
+  Scalar area = 0.0;
+  for (nuenv::Index i = 0; i < order; ++i) {
+    nuenv::Index j = (i + 1) % order;
+    area += points[i][0] * points[j][1] - points[i][1] * points[j][0];
+  }
+
+  return abs(area) / 2.0;
+}
+
+template<typename Scalar, typename ScalarField>
+ScalarField PolyMesh<Scalar, ScalarField>::CellCentre(nuenv::Index cellId) {
+  ScalarField centre {0.0, 0.0, 0.0};
+
+  for (auto faceId : cells_[cellId].FacesId()) {
+    centre += FaceCentre(faceId);
+  }
+
+  centre /= static_cast<Scalar>(cells_[cellId].NFaces());
+  return centre;
+}
+
+template<typename Scalar, typename ScalarField>
+Scalar PolyMesh<Scalar, ScalarField>::CellVolume(nuenv::Index cellId) {
+  const Cell& cell = cells_[cellId];
+  ScalarField cellCentre = CellCentre(cellId);
+  Scalar volume = 0.0;
+
+  for (auto faceId : cell.FacesId()) {
+    ScalarField faceCentre = FaceCentre(faceId);
+    ScalarField faceNormal = FaceNormal3p(faceId);
+    Scalar faceArea = FaceArea(faceId);
+    ScalarField heightVec = faceCentre - cellCentre;
+
+    // Signed volume of the pyramid formed by the face and the cell center.
+    // Volume = 1/3 * BaseArea * Height; here Height ~ projection of r on faceNormal.
+    volume += (1.0 / 3.0) * faceArea * heightVec.dot(faceNormal);
+  }
+
+  return abs(volume);
+}
 
 } // cfd_basics
 

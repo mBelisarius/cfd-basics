@@ -9,10 +9,10 @@ class Face {
  public:
   Face() = default;
 
-  Face(nuenv::Index id, nuenv::Index owner, nuenv::Index neighbour,
-       const nuenv::VectorX<nuenv::Index>& points)
-      : order_(points.size()), id_(id), owner_(owner), neighbour_(neighbour),
-        pointsId_(points) {}
+  Face(nuenv::Index id, nuenv::Index ownerId, nuenv::Index neighbourId,
+       const nuenv::VectorX<nuenv::Index>& pointsId)
+      : order_(pointsId.size()), id_(id), ownerId_(ownerId), neighbourId_(neighbourId),
+        pointsId_(pointsId) {}
 
   nuenv::Index Order() const {
     return order_;
@@ -22,23 +22,23 @@ class Face {
     return id_;
   }
 
-  nuenv::Index Owner() const {
-    return owner_;
+  nuenv::Index OwnerId() const {
+    return ownerId_;
   }
 
-  nuenv::Index Neighbour() const {
-    return neighbour_;
+  nuenv::Index NeighbourId() const {
+    return neighbourId_;
   }
 
-  const nuenv::VectorX<nuenv::Index>& Points() const {
+  const nuenv::VectorX<nuenv::Index>& PointsId() const {
     return pointsId_;
   }
 
  private:
   nuenv::Index order_;
   nuenv::Index id_;
-  nuenv::Index owner_;
-  nuenv::Index neighbour_;
+  nuenv::Index ownerId_;
+  nuenv::Index neighbourId_;
   nuenv::VectorX<nuenv::Index> pointsId_;
 };
 

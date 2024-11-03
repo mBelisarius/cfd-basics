@@ -73,17 +73,19 @@ include(third_party/nuenv.cmake)
 # --- project
 
 add_library("${ProjectName}" STATIC
-        src/generator/boundary_field.hpp
-        src/generator/diffusion.hpp
-        src/generator/generator.hpp
+        src/builder/boundary_field.hpp
+        src/builder/cfd_utils.hpp
+        src/builder/diffusion.hpp
+        src/builder/system.hpp
         src/linalg/gauss_seidel.hpp
         src/linalg/tridiag.hpp
         src/mesh/cell.hpp
         src/mesh/face.hpp
-        src/mesh/mesh.hpp
+        src/mesh/poly_boundary.hpp
         src/mesh/poly_mesh.hpp
         src/numcal/integration.hpp
         #        src/Core.h
+        src/scripts.hpp
         src/solution.hpp
 )
 
