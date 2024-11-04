@@ -10,10 +10,10 @@ class PolyBoundary {
  public:
   PolyBoundary() = default;
 
-  PolyBoundary(nuenv::Index index, nuenv::Index type, nuenv::Index nFaces, nuenv::Index startFace)
-      : index_(index), type_(type), nFaces_(nFaces), startFace_(startFace) {}
+  PolyBoundary(nuenv::Index id, nuenv::Index type, nuenv::Index nFaces, nuenv::Index startFace)
+      : id_(id), type_(type), nFaces_(nFaces), startFace_(startFace) {}
 
-  nuenv::Index Index() const { return index_; }
+  nuenv::Index Id() const { return id_; }
 
   nuenv::Index Type() const { return type_; }
 
@@ -22,7 +22,7 @@ class PolyBoundary {
   nuenv::Index StartFace() const { return startFace_; }
 
  private:
-  nuenv::Index index_;
+  nuenv::Index id_;
   nuenv::Index type_;
   nuenv::Index nFaces_;
   nuenv::Index startFace_;

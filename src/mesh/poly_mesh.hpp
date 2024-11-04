@@ -52,10 +52,12 @@ PolyMesh<Scalar, ScalarField>::PolyMesh(
     const nuenv::VectorX<ScalarField>& points,
     const nuenv::VectorX<Face>& faces)
     : nCells_(nCells), points_(points), faces_(faces), cells_(nCells) {
-  for (const auto& face : faces_) {
+  for (const Face& face : faces_) {
+    cells_[face.OwnerId()].SetId(face.OwnerId());
     cells_[face.OwnerId()].AddFace(face.Id());
 
     if (face.NeighbourId() > -1) {
+      cells_[face.NeighbourId()].SetId(face.NeighbourId());
       cells_[face.NeighbourId()].AddFace(face.Id());
     }
   }
@@ -171,13 +173,10 @@ Scalar PolyMesh<Scalar, ScalarField>::CellVolume(nuenv::Index cellId) {
     ScalarField faceNormal = FaceNormal3p(faceId);
     Scalar faceArea = FaceArea(faceId);
     ScalarField heightVec = faceCentre - cellCentre;
-
-    // Signed volume of the pyramid formed by the face and the cell center.
-    // Volume = 1/3 * BaseArea * Height; here Height ~ projection of r on faceNormal.
-    volume += (1.0 / 3.0) * faceArea * heightVec.dot(faceNormal);
+    volume += (1.0 / 3.0) * faceArea * abs(heightVec.dot(faceNormal));
   }
 
-  return abs(volume);
+  return volume;
 }
 
 } // cfd_basics

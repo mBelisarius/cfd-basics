@@ -6,23 +6,15 @@
 #include "solution.hpp"
 
 namespace cfd_basics {
-template<typename Scalar>
-Solution<Scalar> GaussSeidel(const nuenv::MatrixSQX<Scalar>& a,
-                             const nuenv::VectorX<Scalar>& b,
-                             Scalar rtol = 1e-5,
-                             nuenv::Index maxIter = 100) {
-  nuenv::VectorX<Scalar> x0 = nuenv::VectorX<Scalar>::Zero(b.size());
-  return GaussSeidel(a, b, x0, rtol, maxIter);
-}
 
 template<typename Scalar>
 Solution<Scalar> gaussSeidel(const nuenv::MatrixSQX<Scalar>& a,
                              const nuenv::VectorX<Scalar>& b,
                              const nuenv::VectorX<Scalar>& x0,
                              Scalar rtol = 1e-5,
-                             nuenv::size_t maxIter = 100) {
+                             nuenv::Index maxIter = 100) {
   bool status = false;
-  string message;
+  std::string message;
   nuenv::Index iter;
 
   Scalar sum1;
@@ -58,6 +50,15 @@ Solution<Scalar> gaussSeidel(const nuenv::MatrixSQX<Scalar>& a,
   if (!status) { message = "Convergence not achieved in Gauss-Seidel method"; }
 
   return Solution<Scalar>(status, message, iter, x);
+}
+
+template<typename Scalar>
+Solution<Scalar> GaussSeidel(const nuenv::MatrixSQX<Scalar>& a,
+                             const nuenv::VectorX<Scalar>& b,
+                             Scalar rtol = 1e-5,
+                             nuenv::Index maxIter = 100) {
+  nuenv::VectorX<Scalar> x0 = nuenv::VectorX<Scalar>::Zero(b.size());
+  return gaussSeidel<Scalar>(a, b, x0, rtol, maxIter);
 }
 
 } // cfd_basics

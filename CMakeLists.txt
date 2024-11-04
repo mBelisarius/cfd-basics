@@ -76,6 +76,7 @@ add_library("${ProjectName}" STATIC
         src/builder/boundary_field.hpp
         src/builder/cfd_utils.hpp
         src/builder/diffusion.hpp
+        src/builder/properties.hpp
         src/builder/system.hpp
         src/linalg/gauss_seidel.hpp
         src/linalg/tridiag.hpp

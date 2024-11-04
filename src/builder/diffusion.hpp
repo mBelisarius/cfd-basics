@@ -9,6 +9,7 @@
 
 #include "boundary_field.hpp"
 #include "cfd_utils.hpp"
+#include "properties.hpp"
 #include "system.hpp"
 
 namespace cfd_basics {
@@ -16,8 +17,9 @@ namespace cfd_basics {
 template<typename Scalar, typename ScalarField>
 System<Scalar> BuilderDiffusion(
     PolyMesh<Scalar, ScalarField> polyMesh,
-    nuenv::VectorX<PolyBoundary<Scalar>> polyBoundaries
-//    nuenv::VectorX<BoundaryField<Scalar>> boundaryFields
+    nuenv::VectorX<PolyBoundary<Scalar>> polyBoundaries,
+    nuenv::VectorX<BoundaryField<Scalar>> boundaryFields,
+    PropertiesList<Scalar> properties
 ) {
   nuenv::Index nVolumes = polyMesh.NCells();
   nuenv::MatrixSQX<Scalar> coeffs = nuenv::MatrixSQX<Scalar>::Zero(nVolumes, nVolumes);
@@ -33,20 +35,23 @@ System<Scalar> BuilderDiffusion(
   for (nuenv::Index i = 0; i < boundariesStartFace; ++i) {
     const auto& face = polyMesh.Faces()[i];
 
-    // TODO: kFace
-    Scalar kFace = 1.0;
+    // TODO: kFace with Patankar
+    Scalar kOwner = properties[Property::kCondutivity];
+    Scalar kNeighbour = properties[Property::kCondutivity];
+    Scalar kFace = 0.5 * (kOwner + kNeighbour);
     Scalar faceArea = polyMesh.FaceArea(i);
     Scalar cellsDist = (polyMesh.CellCentre(face.OwnerId()) - polyMesh.CellCentre(face.NeighbourId())).norm();
     Scalar coeff_a = kFace * faceArea / cellsDist;
 
     coeffs(face.OwnerId(), face.OwnerId()) += coeff_a;
-    coeffs(face.OwnerId(), face.NeighbourId()) += coeff_a;
+    coeffs(face.OwnerId(), face.NeighbourId()) -= coeff_a;
     coeffs(face.NeighbourId(), face.NeighbourId()) += coeff_a;
-    coeffs(face.NeighbourId(), face.OwnerId()) += coeff_a;
+    coeffs(face.NeighbourId(), face.OwnerId()) -= coeff_a;
+  }
 
-    // Todo: qdot
-    Scalar qdot = 0.0;
-    constants[face.OwnerId()] += qdot * polyMesh.CellVolume(face.OwnerId());
+  for (const Cell& cell : polyMesh.Cells()) {
+    Scalar qdot = properties[Property::kHeatSource];
+    constants[cell.Id()] += qdot * polyMesh.CellVolume(cell.Id());
   }
 
   for (const auto& boundary : polyBoundaries) {
@@ -57,11 +62,13 @@ System<Scalar> BuilderDiffusion(
         for (nuenv::Index faceId = boundary.StartFace(); faceId < boundary.StartFace() + boundary.NFaces(); ++faceId) {
           const auto& face = polyMesh.Faces()[faceId];
 
-          // TODO: kFace, valueBound
-          Scalar kFace = 1.0;
+          // TODO: kFace with Patankar
+          Scalar kOwner = properties[Property::kCondutivity];
+          Scalar kNeighbour = properties[Property::kCondutivity];
+          Scalar kFace = 0.5 * (kOwner + kNeighbour);
           Scalar faceArea = polyMesh.FaceArea(faceId);
           Scalar boundDist = (polyMesh.CellCentre(face.OwnerId()) - polyMesh.FaceCentre(faceId)).norm();
-          Scalar valueBound = 100.0;
+          Scalar valueBound = boundaryFields[boundary.Id()].Value();
 
           coeffs(face.OwnerId(), face.OwnerId()) += kFace * faceArea / boundDist;
           constants[face.OwnerId()] += valueBound * kFace * faceArea / boundDist;

@@ -8,11 +8,19 @@ namespace cfd_basics {
 template<typename Scalar>
 class BoundaryField {
  public:
-  BoundaryField(nuenv::Index index, nuenv::Index type, Scalar value)
-      : index_(index), type_(type), value_(value) {}
+  BoundaryField() = default;
+
+  BoundaryField(nuenv::Index id, nuenv::Index type, Scalar value)
+      : id_(id), type_(type), value_(value) {}
+
+  nuenv::Index Id() { return id_; }
+
+  nuenv::Index Type() { return type_; }
+
+  Scalar Value() { return value_; }
 
  private:
-  nuenv::Index index_;
+  nuenv::Index id_;
   nuenv::Index type_;
   Scalar value_;
 };

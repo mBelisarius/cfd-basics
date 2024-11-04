@@ -13,10 +13,15 @@ class Cell {
  public:
   Cell() = default;
 
+  explicit Cell(nuenv::Index id)
+      : id_(id), facesId_() {}
+
   Cell(nuenv::Index id, std::unordered_set<nuenv::Index> facesId)
       : id_(id), facesId_(facesId) {}
 
-  nuenv::Index Id() { return id_; }
+  nuenv::Index Id() const { return id_; }
+
+  void SetId(nuenv::Index id) { id_ = id; }
 
   std::unordered_set<nuenv::Index> FacesId() const { return facesId_; }
 

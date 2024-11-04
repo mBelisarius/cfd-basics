@@ -1,5 +1,5 @@
-#ifndef CFD_BASICS_GENERATOR_GENERATOR_H_
-#define CFD_BASICS_GENERATOR_GENERATOR_H_
+#ifndef CFD_BASICS_BUILDER_CFD_UTILS_HPP_
+#define CFD_BASICS_BUILDER_CFD_UTILS_HPP_
 
 #include "nuenv/core"
 
@@ -54,4 +54,4 @@ Scalar Patankar(Scalar kP, Scalar dxP, Scalar kE, Scalar dxE) {
 
 } // cfd_basics
 
-#endif //CFD_BASICS_GENERATOR_GENERATOR_H_
+#endif //CFD_BASICS_BUILDER_CFD_UTILS_HPP_
