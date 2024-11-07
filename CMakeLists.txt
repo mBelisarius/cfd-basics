@@ -112,6 +112,11 @@ target_link_libraries("${ProjectName}-main" PUBLIC "${ProjectName}")
 add_executable("${ProjectName}-tc1" tc1/tc1.cpp)
 target_link_libraries("${ProjectName}-tc1" PUBLIC "${ProjectName}")
 
+# --- tc2
+
+add_executable("${ProjectName}-tc2" tc2/tc2.cpp)
+target_link_libraries("${ProjectName}-tc2" PUBLIC "${ProjectName}")
+
 # --- gtest
 
 enable_testing()

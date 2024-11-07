@@ -8,7 +8,8 @@ namespace cfd_basics {
 enum class Property {
   kCondutivity,
   kDensity,
-  kHeatSource
+  kHeatSource,
+  kThermalDiffusivity
 };
 
 template<typename Scalar>

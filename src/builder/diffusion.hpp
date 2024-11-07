@@ -19,7 +19,10 @@ System<Scalar> BuilderDiffusion(
     PolyMesh<Scalar, ScalarField> polyMesh,
     nuenv::VectorX<PolyBoundary<Scalar>> polyBoundaries,
     nuenv::VectorX<BoundaryField<Scalar>> boundaryFields,
-    PropertiesList<Scalar> properties
+    PropertiesList<Scalar> properties,
+    nuenv::VectorX<Scalar> x0,
+    Scalar dt,
+    Scalar theta = 0.5
 ) {
   nuenv::Index nVolumes = polyMesh.NCells();
   nuenv::MatrixSQX<Scalar> coeffs = nuenv::MatrixSQX<Scalar>::Zero(nVolumes, nVolumes);
@@ -35,23 +38,33 @@ System<Scalar> BuilderDiffusion(
   for (nuenv::Index i = 0; i < boundariesStartFace; ++i) {
     const auto& face = polyMesh.Faces()[i];
 
-    // TODO: kFace with Patankar
-    Scalar kOwner = properties[Property::kCondutivity];
-    Scalar kNeighbour = properties[Property::kCondutivity];
-    Scalar kFace = 0.5 * (kOwner + kNeighbour);
+    // TODO: alphaFace with Patankar
+    Scalar alphaOwner = properties[Property::kThermalDiffusivity];
+    Scalar alphaNeighbour = properties[Property::kThermalDiffusivity];
+    Scalar alphaFace = 0.5 * (alphaOwner + alphaNeighbour);
     Scalar faceArea = polyMesh.FaceArea(i);
     Scalar cellsDist = (polyMesh.CellCentre(face.OwnerId()) - polyMesh.CellCentre(face.NeighbourId())).norm();
-    Scalar coeff_a = kFace * faceArea / cellsDist;
+    Scalar coeff_a = (alphaFace * faceArea / cellsDist) * theta * dt;
 
     coeffs(face.OwnerId(), face.OwnerId()) += coeff_a;
     coeffs(face.OwnerId(), face.NeighbourId()) -= coeff_a;
     coeffs(face.NeighbourId(), face.NeighbourId()) += coeff_a;
     coeffs(face.NeighbourId(), face.OwnerId()) -= coeff_a;
+
+    Scalar const_b =
+        (alphaFace * faceArea / cellsDist) * (1.0 - theta) * dt * (x0[face.OwnerId()] - x0[face.NeighbourId()]);
+    constants[face.OwnerId()] -= const_b;
+    constants[face.NeighbourId()] += const_b;
   }
 
   for (const Cell& cell : polyMesh.Cells()) {
-    Scalar qdot = properties[Property::kHeatSource];
-    constants[cell.Id()] += qdot * polyMesh.CellVolume(cell.Id());
+    Scalar cellVolume = polyMesh.CellVolume(cell.Id());
+    coeffs(cell.Id(), cell.Id()) += cellVolume;
+
+    constants[cell.Id()] +=
+        properties[Property::kHeatSource] * cellVolume * dt * properties[Property::kThermalDiffusivity]
+            / properties[Property::kCondutivity];
+    constants[cell.Id()] += cellVolume * x0[cell.Id()];
   }
 
   for (const auto& boundary : polyBoundaries) {
@@ -62,16 +75,16 @@ System<Scalar> BuilderDiffusion(
         for (nuenv::Index faceId = boundary.StartFace(); faceId < boundary.StartFace() + boundary.NFaces(); ++faceId) {
           const auto& face = polyMesh.Faces()[faceId];
 
-          // TODO: kFace with Patankar
-          Scalar kOwner = properties[Property::kCondutivity];
-          Scalar kNeighbour = properties[Property::kCondutivity];
-          Scalar kFace = 0.5 * (kOwner + kNeighbour);
+          // TODO: alphaFace with Patankar
+          Scalar alphaOwner = properties[Property::kThermalDiffusivity];
+          Scalar alphaFace = alphaOwner;
           Scalar faceArea = polyMesh.FaceArea(faceId);
           Scalar boundDist = (polyMesh.CellCentre(face.OwnerId()) - polyMesh.FaceCentre(faceId)).norm();
           Scalar valueBound = boundaryFields[boundary.Id()].Value();
 
-          coeffs(face.OwnerId(), face.OwnerId()) += kFace * faceArea / boundDist;
-          constants[face.OwnerId()] += valueBound * kFace * faceArea / boundDist;
+          coeffs(face.OwnerId(), face.OwnerId()) += (alphaFace * faceArea / boundDist) * theta * dt;
+          constants[face.OwnerId()] -= (alphaFace * faceArea / boundDist) * (1.0 - theta) * dt * x0[face.OwnerId()];
+          constants[face.OwnerId()] += valueBound * (alphaFace * faceArea / boundDist) * dt;
         }
         break;
       case 2:  // Neumann
