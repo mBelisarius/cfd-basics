@@ -36,8 +36,8 @@ int main() {
 
   nuenv::Index nVolumes = 10;
 
-  auto mesh = MakePolyMesh1D<Scalar, ScalarField>(0.1, 1.0, nVolumes, 4);
-  auto boundaries = MakePolyBoundaries1D<Scalar>(nVolumes, 4);
+  auto mesh = MakePolyMesh1d<Scalar, ScalarField>(0.1, 1.0, nVolumes, 4);
+  auto boundaries = MakePolyBoundaries1d<Scalar>(nVolumes, 4);
 
   nuenv::VectorX<BoundaryField<Scalar>> boundaryFields(3);
   boundaryFields[0] = BoundaryField<Scalar>(0, 1, 0.0);  // boundaryFieldLeft

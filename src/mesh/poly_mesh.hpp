@@ -1,6 +1,8 @@
 #ifndef CFD_BASICS_MESH_POLYMESH_H_
 #define CFD_BASICS_MESH_POLYMESH_H_
 
+#include <unordered_set>
+
 #include "nuenv/core"
 
 #include "mesh/cell.hpp"
@@ -57,7 +59,6 @@ PolyMesh<Scalar, ScalarField>::PolyMesh(
     cells_[face.OwnerId()].AddFace(face.Id());
 
     if (face.NeighbourId() > -1) {
-      cells_[face.NeighbourId()].SetId(face.NeighbourId());
       cells_[face.NeighbourId()].AddFace(face.Id());
     }
   }
@@ -153,12 +154,19 @@ Scalar PolyMesh<Scalar, ScalarField>::FaceArea(nuenv::Index faceId) {
 template<typename Scalar, typename ScalarField>
 ScalarField PolyMesh<Scalar, ScalarField>::CellCentre(nuenv::Index cellId) {
   ScalarField centre {0.0, 0.0, 0.0};
+  std::unordered_set<nuenv::Index> uniquePoints;
 
   for (auto faceId : cells_[cellId].FacesId()) {
-    centre += FaceCentre(faceId);
+    for (auto pointId : faces_[faceId].PointsId()) {
+      uniquePoints.insert(pointId);
+    }
   }
 
-  centre /= static_cast<Scalar>(cells_[cellId].NFaces());
+  for (const auto& pointId : uniquePoints) {
+    centre += points_[pointId];
+  }
+
+  centre /= static_cast<Scalar>(uniquePoints.size());
   return centre;
 }
 

@@ -18,7 +18,7 @@ template<typename Scalar, typename ScalarField>
 System<Scalar> BuilderDiffusion(
     PolyMesh<Scalar, ScalarField> polyMesh,
     nuenv::VectorX<PolyBoundary<Scalar>> polyBoundaries,
-    nuenv::VectorX<BoundaryField<Scalar>> boundaryFields,
+    nuenv::VectorX<BoundaryField<Scalar, ScalarField>> boundaryFields,
     PropertiesList<Scalar> properties,
     nuenv::VectorX<Scalar> x0,
     Scalar dt,
@@ -79,8 +79,9 @@ System<Scalar> BuilderDiffusion(
           Scalar alphaOwner = properties[Property::kThermalDiffusivity];
           Scalar alphaFace = alphaOwner;
           Scalar faceArea = polyMesh.FaceArea(faceId);
+          ScalarField faceCentre = polyMesh.FaceCentre(faceId);
           Scalar boundDist = (polyMesh.CellCentre(face.OwnerId()) - polyMesh.FaceCentre(faceId)).norm();
-          Scalar valueBound = boundaryFields[boundary.Id()].Value();
+          Scalar valueBound = boundaryFields[boundary.Id()].Value(faceCentre);
 
           coeffs(face.OwnerId(), face.OwnerId()) += (alphaFace * faceArea / boundDist) * theta * dt;
           constants[face.OwnerId()] -= (alphaFace * faceArea / boundDist) * (1.0 - theta) * dt * x0[face.OwnerId()];
